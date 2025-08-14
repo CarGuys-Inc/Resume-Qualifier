@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
+import { basicPrompt } from "@/lib//prompts";
+import { useRouter } from "next/navigation";
+
+export default function JobDialog() {
+  const [jobTitle, setJobTitle] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [weights, setWeights] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const supabase = createClient();
+  const router = useRouter();
+
+  const handleAddWeight = () => {
+    setWeights([...weights, { term: "", value: "" }]);
+  };
+
+  const handleRemoveWeight = (index) => {
+    setWeights(weights.filter((_, i) => i !== index));
+  };
+
+  const handleChangeWeight = (index, key, value) => {
+    const updated = [...weights];
+    updated[index][key] = value;
+    setWeights(updated);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+
+    const weightsObj = weights.reduce((acc, { term, value }) => {
+      if (term.trim() !== "" && !isNaN(Number(value))) {
+        acc[term.trim()] = Number(value);
+      }
+      return acc;
+    }, {});
+
+    let error;
+      // Insert new job
+      // eslint-disable-next-line prefer-const
+      ({ error } = await supabase.from("job_configs").insert([
+        {
+          job_title: jobTitle,
+          prompt_template: prompt,
+          weights: weightsObj,
+        }
+      ]));
+
+    setSaving(false);
+
+    if (error) {
+      console.error("Error saving job:", error);
+      return;
+    }
+
+    router.push("/jobs")
+
+  };
+
+
+  return (
+        <div className="">
+          {/* Job Title */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Job Title</label>
+            <Input
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="e.g. Automotive Mechanic"
+            />
+          </div>
+
+          {/* Prompt Template */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Prompt Template
+            </label>
+            <Textarea
+              onChange={(e) => setPrompt(e.target.value)}
+              defaultValue={basicPrompt}
+              rows={20}
+            />
+          </div>
+
+          {/* Weights Table */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Weights</label>
+            <div className="space-y-2">
+              {weights.map((w, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    placeholder="Term"
+                    onChange={(e) =>
+                      handleChangeWeight(index, "term", e.target.value)
+                    }
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Value"
+                    type="number"
+                    onChange={(e) =>
+                      handleChangeWeight(index, "value", e.target.value)
+                    }
+                    className="w-28"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRemoveWeight(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button variant="secondary" size="sm" onClick={handleAddWeight}>
+                + Add Weight
+              </Button>
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+
+  );
+}
