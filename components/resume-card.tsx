@@ -15,7 +15,7 @@ export default function ResumeCard({ resume }) {
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
       <Link
-        href={`https://recruiterflow.com/candidates/${resume.id}`}
+        href={`https://recruiterflow.com/candidates/${resume.candidate_id}`}
         target="_blank"
         rel="noreferrer"
         className="block"

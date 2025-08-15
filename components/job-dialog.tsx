@@ -14,11 +14,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
-export default function JobDialog({ job, onSave, triggerLabel = null }) {
+type Weight = {
+  term: string;
+  value: string | number;
+};
+
+type Job = {
+  id?: number;
+  job_title?: string;
+  prompt_template?: string;
+  weights?: Record<string, number>;
+  acceptance_criteria?: string;
+};
+
+type JobDialogProps = {
+  job?: Job;
+  onSave?: () => void;
+  triggerLabel?: string | null;
+};
+
+export default function JobDialog({
+  job,
+  onSave,
+  triggerLabel = null
+}: JobDialogProps) {
   const [open, setOpen] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [weights, setWeights] = useState([]);
+  const [weights, setWeights] = useState<Weight[]>([]);
   const [criteria, setCriteria] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -32,10 +55,7 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
       setCriteria(job.acceptance_criteria || "");
       setWeights(
         job.weights
-          ? Object.entries(job.weights).map(([term, value]) => ({
-              term,
-              value
-            }))
+          ? Object.entries(job.weights).map(([term, value]) => ({ term, value }))
           : []
       );
     } else {
@@ -46,32 +66,38 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
     }
   }, [job, open]);
 
-  const handleAddWeight = () => {
-    setWeights([...weights, { term: "", value: "" }]);
-  };
+  const handleAddWeight = () => setWeights([...weights, { term: "", value: "" }]);
 
-  const handleRemoveWeight = (index) => {
+  const handleRemoveWeight = (index: number) =>
     setWeights(weights.filter((_, i) => i !== index));
-  };
 
-  const handleChangeWeight = (index, key, value) => {
-    const updated = [...weights];
-    updated[index][key] = value;
-    setWeights(updated);
+  const handleChangeWeight = (
+    index: number,
+    key: keyof Weight,
+    value: string | number
+  ) => {
+    setWeights((prev) => {
+      const updated = [...prev];
+      updated[index][key] = value;
+      return updated;
+    });
   };
 
   const handleSave = async () => {
     setSaving(true);
 
-    const weightsObj = weights.reduce((acc, { term, value }) => {
-      if (term.trim() !== "" && !isNaN(Number(value))) {
-        acc[term.trim()] = Number(value);
-      }
-      return acc;
-    }, {});
+    const weightsObj: Record<string, number> = weights.reduce(
+      (acc, { term, value }) => {
+        if (term.trim() !== "" && !isNaN(Number(value))) {
+          acc[term.trim()] = Number(value);
+        }
+        return acc;
+      },
+      {}
+    );
 
     let error;
-    if (job) {
+    if (job?.id) {
       // Update existing job
       ({ error } = await supabase
         .from("job_configs")
@@ -79,6 +105,7 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
           job_title: jobTitle,
           prompt_template: prompt,
           weights: weightsObj,
+          acceptance_criteria: criteria
         })
         .eq("id", job.id));
     } else {
@@ -101,7 +128,7 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
     }
 
     setOpen(false);
-    if (onSave) onSave();
+    onSave?.();
   };
 
   return (
@@ -111,16 +138,14 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
           <Button>{triggerLabel}</Button>
         ) : (
           <div className="mb-4 p-4 border rounded cursor-pointer dark:hover:bg-gray-600 hover:bg-gray-50">
-            <h2 className="text-xl font-semibold">{job.job_title}</h2>
+            <h2 className="text-xl font-semibold">{job?.job_title}</h2>
           </div>
         )}
       </DialogTrigger>
 
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {job ? `Edit ${job.job_title}` : "Create New Job"}
-          </DialogTitle>
+          <DialogTitle>{job ? `Edit ${job.job_title}` : "Create New Job"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -136,9 +161,7 @@ export default function JobDialog({ job, onSave, triggerLabel = null }) {
 
           {/* Prompt Template */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Prompt Template
-            </label>
+            <label className="block text-sm font-medium mb-1">Prompt Template</label>
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
