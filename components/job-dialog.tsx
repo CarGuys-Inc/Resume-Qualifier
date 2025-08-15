@@ -71,17 +71,23 @@ export default function JobDialog({
   const handleRemoveWeight = (index: number) =>
     setWeights(weights.filter((_, i) => i !== index));
 
-  const handleChangeWeight = (
-    index: number,
-    key: keyof Weight,
-    value: string | number
-  ) => {
-    setWeights((prev) => {
-      const updated = [...prev];
-      updated[index][key] = value;
-      return updated;
-    });
-  };
+const handleChangeWeight = (
+  index: number,
+  key: keyof Weight,
+  value: string
+) => {
+  setWeights((prev) => {
+    const updated = [...prev];
+
+    if (key === "value") {
+      updated[index][key] = Number(value); // convert to number
+    } else {
+      updated[index][key] = value; // keep as string
+    }
+
+    return updated;
+  });
+};
 
   const handleSave = async () => {
     setSaving(true);
@@ -187,11 +193,9 @@ export default function JobDialog({
                     placeholder="Value"
                     type="number"
                     value={w.value}
-                    onChange={(e) =>
-                      handleChangeWeight(index, "value", e.target.value)
-                    }
+                    onChange={(e) => handleChangeWeight(index, "value", e.target.value)}
                     className="w-28"
-                  />
+                    />
                   <Button
                     variant="destructive"
                     size="sm"
