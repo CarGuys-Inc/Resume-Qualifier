@@ -8,11 +8,17 @@ import { createClient } from "@/lib/supabase/client";
 import { basicPrompt } from "@/lib//prompts";
 import { useRouter } from "next/navigation";
 
+type Weight = {
+  term: string;
+  value: number;
+};
+
 export default function JobDialog() {
   const [jobTitle, setJobTitle] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [weights, setWeights] = useState([]);
-  const [saving, setSaving] = useState(false);
+const [weights, setWeights] = useState<Weight[]>([
+  { term: "", value: 0 }
+]);  const [saving, setSaving] = useState(false);
 
   const supabase = createClient();
   const router = useRouter();
@@ -25,11 +31,12 @@ export default function JobDialog() {
     setWeights(weights.filter((_, i) => i !== index));
   };
 
-  const handleChangeWeight = (index, key, value) => {
-    const updated = [...weights];
-    updated[index][key] = value;
-    setWeights(updated);
-  };
+const handleChangeWeight = (index: number, key: keyof Weight, value: string | number) => {
+  const updated = [...weights];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  updated[index][key] = value as any; // or convert string->number if needed
+  setWeights(updated);
+};
 
   const handleSave = async () => {
     setSaving(true);
