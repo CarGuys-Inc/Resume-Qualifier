@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JobDialog from "@/components/job-dialog";
 import Link from "next/link";
 
-export default async function ProtectedPage() {
+export default async function JobsPage() {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.getClaims();
@@ -29,6 +29,7 @@ export default async function ProtectedPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <Card className="mb-6">
+          <Link href="#">
           <CardHeader>
             <CardTitle className="text-center">Jobs Currently Qualifying</CardTitle>
           </CardHeader>
@@ -37,8 +38,10 @@ export default async function ProtectedPage() {
               <span>{jobs?.length ?? 0}</span>
             </div>
           </CardContent>
+          </Link>
         </Card>
         <Card className="mb-6">
+          <Link href="/resumes">
           <CardHeader>
             <CardTitle className="text-center">Resumes Processed</CardTitle>
           </CardHeader>
@@ -47,6 +50,7 @@ export default async function ProtectedPage() {
               <span>{resumes?.length ?? 0}</span>
             </div>
           </CardContent>
+          </Link>
         </Card>
       </div>
 
