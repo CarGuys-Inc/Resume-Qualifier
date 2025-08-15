@@ -68,7 +68,7 @@ export default function JobDialog() {
       return;
     }
 
-    router.push("/jobs");
+    router.push("/dashboard");
   };
 
   return (
