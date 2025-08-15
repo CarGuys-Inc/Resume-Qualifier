@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ResumeCard from "@/components/resume-card"; 
+import { ResumesPieChart } from "@/components/job-pie-chart";
 import Link from "next/link";
 
 export default async function ResumesPage() {
@@ -36,6 +37,8 @@ export default async function ResumesPage() {
           </CardContent>
           </Link>
         </Card>
+        <ResumesPieChart resumes={resumes ?? []} />
+
       </div>
 
       {/* Resumes list */}
@@ -49,17 +52,6 @@ export default async function ResumesPage() {
     <ResumeCard key={resume.id} resume={resume} />
   ))}
 </div>
-
-        {/* {resumes.map((resume) => (
-          <h2 key={resume.id} className="mb-4 p-4 border rounded-lg flex flex-col gap-2 shadow-sm">
-            <p><strong>Name:</strong> {resume.candidate_name}</p>
-            <p><strong>Job Applied For:</strong> {resume.job_title}</p>
-            <p><strong>Score:</strong> {resume.score}</p>
-            <p className="capitalize"><strong>Qualified:</strong> {resume.qualified.toLocaleString()}</p>
-            <p><strong>Processed At:</strong> {new Date(resume.created_at).toLocaleString()}</p>
-            <p><strong>Reasoning:</strong> {resume.reasoning.toLocaleString()}</p>
-          </h2>
-        ))} */}
       </div>
     </div>
     </div>
