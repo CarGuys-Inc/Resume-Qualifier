@@ -3,7 +3,7 @@ export function Hero() {
     <div className="flex flex-col gap-16 items-center">
 
       <p className="text-3xl lg:text-4xl !leading-tight mx-auto max-w-xl text-center">
-        Let's sort some {" "}
+        Let&apos;s sort some {" "}
         <span
           className="font-bold hover:underline uppercase"
         >
