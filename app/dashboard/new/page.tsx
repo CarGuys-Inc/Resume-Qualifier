@@ -18,7 +18,7 @@ export default function JobDialog() {
   const router = useRouter();
 
   const handleAddWeight = () => {
-    setWeights([...weights, { term: "", value: "" }]);
+    setWeights([...weights]);
   };
 
   const handleRemoveWeight = (index) => {
