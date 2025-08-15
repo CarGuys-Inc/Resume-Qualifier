@@ -27,7 +27,7 @@ export default function ResumeCard({ resume }: ResumeCardProps) {
       ? "bg-yellow-100 text-yellow-700"
       : "bg-red-100 text-red-700";
 
-  const formattedTime = format(new Date(resume.created_at), "MMM dd | hh:mm a");
+  const formattedTime = format(new Date(resume.created_at), "MMM dd | h:mm a");
 
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
