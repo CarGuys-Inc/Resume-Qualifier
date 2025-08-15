@@ -5,26 +5,26 @@ import JobDialog from "@/components/job-dialog";
 import Link from "next/link";
 
 // Define types for Supabase tables
-type JobConfig = {
-  id: number;
-  job_title: string;
-  prompt_template: string;
-  weights: Record<string, number>;
-  qualification_threshold?: number;
-};
+// type JobConfig = {
+//   id: number;
+//   job_title: string;
+//   prompt_template: string;
+//   weights: Record<string, number>;
+//   qualification_threshold?: number;
+// };
 
-type ResumeLog = {
-  id: number;
-  candidate_name: string;
-  candidate_id?: number;
-  job_id?: number;
-  job_title: string;
-  score: number;
-  qualified: boolean;
-  reasoning: string;
-  resume_text?: string;
-  created_at: string;
-};
+// type ResumeLog = {
+//   id: number;
+//   candidate_name: string;
+//   candidate_id?: number;
+//   job_id?: number;
+//   job_title: string;
+//   score: number;
+//   qualified: boolean;
+//   reasoning: string;
+//   resume_text?: string;
+//   created_at: string;
+// };
 
 export default async function JobsPage() {
   const supabase = await createClient();
