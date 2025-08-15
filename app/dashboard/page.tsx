@@ -34,14 +34,8 @@ export default async function JobsPage() {
     redirect("/auth/login");
   }
 
-const { data: jobsData } = await supabase
-  .from<JobConfig, JobConfig>("job_configs")
-  .select("*");
-
-const { data: resumesData } = await supabase
-  .from<ResumeLog, ResumeLog>("resume_logs")
-  .select("*");
-
+  const { data: jobsData } = await supabase.from("job_configs").select();
+  const { data: resumesData } = await supabase.from("resume_logs").select();
 
   if (!jobsData) return <div>No jobs found</div>;
 
