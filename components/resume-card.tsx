@@ -75,7 +75,7 @@ export default function ResumeCard({ resume }: ResumeCardProps) {
 
         {/* Resume PDF Dialog */}
       {resume.resumeFile && (
-        <Dialog className="min-w-full">
+        <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">View Resume PDF</Button>
           </DialogTrigger>
