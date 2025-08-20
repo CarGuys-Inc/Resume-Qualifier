@@ -18,9 +18,10 @@ const PAGE_SIZE = 24;
 export default async function ResumesPage({
   searchParams,
 }: {
-  searchParams?: { page?: string };
+  searchParams?: Promise<{ page?: string }>;
 }) {
-  const page = Number(searchParams?.page ?? 1);
+  const sp = await searchParams; // ✅ await before using
+  const page = Number(sp?.page ?? 1);
   const offset = (page - 1) * PAGE_SIZE;
 
   const supabase = await createClient();
