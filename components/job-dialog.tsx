@@ -7,10 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,7 +25,7 @@ type Job = {
   job_title?: string;
   prompt_template?: string;
   weights?: Record<string, number>;
-  acceptance_criteria?: string;
+  qualification_threshold?: number;
 };
 
 type JobDialogProps = {
@@ -36,13 +37,13 @@ type JobDialogProps = {
 export default function JobDialog({
   job,
   onSave,
-  triggerLabel = null
+  triggerLabel = null,
 }: JobDialogProps) {
   const [open, setOpen] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [weights, setWeights] = useState<Weight[]>([]);
-  const [criteria, setCriteria] = useState("");
+  const [qualificationThreshold, setQualificationThreshold] = useState(50); // default 50%
   const [saving, setSaving] = useState(false);
 
   const supabase = createClient();
@@ -52,90 +53,109 @@ export default function JobDialog({
     if (job) {
       setJobTitle(job.job_title || "");
       setPrompt(job.prompt_template || "");
-      setCriteria(job.acceptance_criteria || "");
+      setQualificationThreshold(job.qualification_threshold ?? 50);
       setWeights(
         job.weights
-          ? Object.entries(job.weights).map(([term, value]) => ({ term, value }))
+          ? Object.entries(job.weights).map(([term, value]) => ({
+              term,
+              value,
+            }))
           : []
       );
     } else {
       setJobTitle("");
       setPrompt("");
-      setCriteria("");
+      setQualificationThreshold(50);
       setWeights([]);
     }
   }, [job, open]);
 
-  const handleAddWeight = () => setWeights([...weights, { term: "", value: "" }]);
+  const handleAddWeight = () =>
+    setWeights([...weights, { term: "", value: "" }]);
 
   const handleRemoveWeight = (index: number) =>
     setWeights(weights.filter((_, i) => i !== index));
 
-const handleChangeWeight = (
-  index: number,
-  key: keyof Weight,
-  value: string
-) => {
-  setWeights((prev) => {
-    const updated = [...prev];
+  const handleChangeWeight = (
+    index: number,
+    key: keyof Weight,
+    value: string
+  ) => {
+    setWeights((prev) => {
+      const updated = [...prev];
 
-    if (key === "value") {
-      updated[index][key] = Number(value); // convert to number
-    } else {
-      updated[index][key] = value; // keep as string
-    }
+      if (key === "value") {
+        updated[index][key] = Number(value); // convert to number
+      } else {
+        updated[index][key] = value; // keep as string
+      }
 
-    return updated;
-  });
+      return updated;
+    });
+  };
+
+// Update handleSave to validate
+const handleSave = async () => {
+  if (!isTotalValid) {
+    alert("The total of all weights must equal 100%");
+    return;
+  }
+
+  setSaving(true);
+
+  const weightsObj: Record<string, number> = weights.reduce(
+    (acc, { term, value }) => {
+      if (term.trim() !== "" && !isNaN(Number(value))) {
+        acc[term.trim()] = Number(value);
+      }
+      return acc;
+    },
+    {}
+  );
+
+  let error;
+  if (job?.id) {
+    ({ error } = await supabase
+      .from("job_configs")
+      .update({
+        job_title: jobTitle,
+        prompt_template: prompt,
+        weights: weightsObj,
+        qualification_threshold: qualificationThreshold,
+      })
+      .eq("id", job.id));
+  } else {
+    ({ error } = await supabase.from("job_configs").insert([
+      {
+        job_title: jobTitle,
+        prompt_template: prompt,
+        weights: weightsObj,
+        qualification_threshold: qualificationThreshold,
+      },
+    ]));
+  }
+
+  setSaving(false);
+
+  if (error) {
+    console.error("Error saving job:", error);
+    return;
+  }
+
+  setOpen(false);
+  onSave?.();
 };
 
-  const handleSave = async () => {
-    setSaving(true);
+  // Calculate total weight dynamically
+const totalWeight = weights.reduce(
+  (acc, w) => acc + (typeof w.value === "number" ? w.value : 0),
+  0
+);
 
-    const weightsObj: Record<string, number> = weights.reduce(
-      (acc, { term, value }) => {
-        if (term.trim() !== "" && !isNaN(Number(value))) {
-          acc[term.trim()] = Number(value);
-        }
-        return acc;
-      },
-      {}
-    );
+// Check if total is valid
+const isTotalValid = totalWeight === 100;
 
-    let error;
-    if (job?.id) {
-      // Update existing job
-      ({ error } = await supabase
-        .from("job_configs")
-        .update({
-          job_title: jobTitle,
-          prompt_template: prompt,
-          weights: weightsObj,
-          acceptance_criteria: criteria
-        })
-        .eq("id", job.id));
-    } else {
-      // Insert new job
-      ({ error } = await supabase.from("job_configs").insert([
-        {
-          job_title: jobTitle,
-          prompt_template: prompt,
-          weights: weightsObj,
-          acceptance_criteria: criteria
-        }
-      ]));
-    }
 
-    setSaving(false);
-
-    if (error) {
-      console.error("Error saving job:", error);
-      return;
-    }
-
-    setOpen(false);
-    onSave?.();
-  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -149,9 +169,11 @@ const handleChangeWeight = (
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{job ? `Edit ${job.job_title}` : "Create New Job"}</DialogTitle>
+          <DialogTitle>
+            {job ? `Edit ${job.job_title}` : "Create New Job"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -167,11 +189,17 @@ const handleChangeWeight = (
 
           {/* Prompt Template */}
           <div>
-            <label className="block text-sm font-medium mb-1">Prompt Template</label>
+            <label className="block text-sm font-medium mb-1">
+              Prompt Template
+            </label>
+            <p>
+              You are an AI recruiter assistant. You will score resumes against
+              job descriptions.
+            </p>
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              rows={20}
+              rows={10}
             />
           </div>
 
@@ -193,9 +221,11 @@ const handleChangeWeight = (
                     placeholder="Value"
                     type="number"
                     value={w.value}
-                    onChange={(e) => handleChangeWeight(index, "value", e.target.value)}
+                    onChange={(e) =>
+                      handleChangeWeight(index, "value", e.target.value)
+                    }
                     className="w-28"
-                    />
+                  />
                   <Button
                     variant="destructive"
                     size="sm"
@@ -205,9 +235,39 @@ const handleChangeWeight = (
                   </Button>
                 </div>
               ))}
+              <div className="mt-2 text-sm text-right font-medium pr-24">
+                Total: {totalWeight}%
+                {!isTotalValid && (
+                  <span className="text-red-500 ml-2">Must equal 100%</span>
+                )}
+              </div>
               <Button variant="secondary" size="sm" onClick={handleAddWeight}>
                 + Add Weight
               </Button>
+            </div>
+
+          </div>
+
+          {/* Qualification Threshold */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Qualification Threshold
+            </label>
+            <p className="text-sm text-gray-500 mb-2">
+              Set the minimum score a resume must achieve to be considered
+              qualified.
+            </p>
+            <div className="flex items-center gap-4">
+              <Slider
+                value={[qualificationThreshold]}
+                max={100}
+                step={1}
+                className="flex-1"
+                onValueChange={(value) => setQualificationThreshold(value[0])}
+              />
+              <span className="w-12 text-right font-medium">
+                {qualificationThreshold}%
+              </span>
             </div>
           </div>
         </div>

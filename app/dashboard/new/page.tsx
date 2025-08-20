@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { createClient } from "@/lib/supabase/client";
 import { basicPrompt } from "@/lib/prompts";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,7 @@ export default function JobDialog() {
   const [jobTitle, setJobTitle] = useState("");
   const [prompt, setPrompt] = useState(basicPrompt);
   const [weights, setWeights] = useState<Weight[]>([{ term: "", value: 0 }]);
+  const [qualificationThreshold, setQualificationThreshold] = useState(70); // default 70%
   const [saving, setSaving] = useState(false);
 
   const supabase = createClient();
@@ -58,6 +60,7 @@ export default function JobDialog() {
         job_title: jobTitle,
         prompt_template: prompt,
         weights: weightsObj,
+        qualification_threshold: qualificationThreshold,
       },
     ]);
 
@@ -127,8 +130,28 @@ export default function JobDialog() {
         </div>
       </div>
 
+      {/* Qualification Threshold */}
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Acceptance Criteria (Qualification Threshold)
+        </label>
+        <div className="flex items-center gap-4">
+          <Slider
+            value={[qualificationThreshold]}
+            onValueChange={(val) => setQualificationThreshold(val[0])}
+            min={0}
+            max={100}
+            step={1}
+            className="flex-1"
+          />
+          <span className="w-12 text-sm text-muted-foreground text-right">
+            {qualificationThreshold}%
+          </span>
+        </div>
+      </div>
+
       <Button onClick={handleSave} disabled={saving}>
-        {saving ? "Saving..." : "Save Changes"}
+        {saving ? "Saving..." : "Save Job"}
       </Button>
     </div>
   );

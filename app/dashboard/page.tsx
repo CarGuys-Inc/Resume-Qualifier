@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import JobDialog from "@/components/job-dialog";
 import Link from "next/link";
 
@@ -35,7 +35,13 @@ export default async function JobsPage() {
   }
 
   const { data: jobsData } = await supabase.from("job_configs").select();
-  const { data: resumesData } = await supabase.from("resume_logs").select();
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const { data: resumesData } = await supabase
+    .from("resume_logs")
+    .select()
+    .gte("created_at", yesterday.toISOString());
 
   if (!jobsData) return <div>No jobs found</div>;
 
@@ -66,6 +72,9 @@ export default async function JobsPage() {
           <Link href="dashboard/resumes">
             <CardHeader>
               <CardTitle className="text-center">Resumes Processed</CardTitle>
+              <CardDescription className="text-sm text-gray-500 text-center">
+                In the past 24 hours
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center text-5xl justify-center gap-2">
@@ -81,7 +90,7 @@ export default async function JobsPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Jobs</h1>
           <Link
-            href="/dashoard/new"
+            href="/dashboard/new"
             className="bg-blue-600 text-white px-4 py-2 rounded"
           >
             Create New Job
