@@ -16,11 +16,10 @@ import {
 const PAGE_SIZE = 24;
 
 export default async function ResumesPage({
-  searchParams: searchParamsPromise,
+  searchParams,
 }: {
-  searchParams?: { page?: string } | Promise<{ page?: string }>;
+  searchParams?: { page?: string };
 }) {
-    const searchParams = await searchParamsPromise; // ✅ await here
   const page = Number(searchParams?.page ?? 1);
   const offset = (page - 1) * PAGE_SIZE;
 
