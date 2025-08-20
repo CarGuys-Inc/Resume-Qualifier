@@ -13,21 +13,22 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
 
-type ResumesPageProps = {
-  searchParams?: { page?: string };
-};
+export default async function ResumesPage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams?: { page?: string } | Promise<{ page?: string }>;
+}) {
+    const searchParams = await searchParamsPromise; // ✅ await here
+  const page = Number(searchParams?.page ?? 1);
+  const offset = (page - 1) * PAGE_SIZE;
 
-export default async function ResumesPage({ searchParams }: ResumesPageProps) {
   const supabase = await createClient();
 
   // Auth check
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims) redirect("/auth/login");
-
-  const page = Number(searchParams?.page ?? 1);
-  const offset = (page - 1) * PAGE_SIZE;
 
   // Fetch counts and data
   const { count: totalCountResumes } = await supabase.from("resume_logs").select("*", { count: "exact", head: true });
