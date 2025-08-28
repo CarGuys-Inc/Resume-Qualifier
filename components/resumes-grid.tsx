@@ -61,7 +61,7 @@ export default function ResumesGrid({
 
   useEffect(() => {
     debouncedFetch(search, page);
-  }, [search, page]);
+  }, [search, page, debouncedFetch]);
 
   const renderPaginationItems = () => {
     const items: (number | "ellipsis")[] = [];

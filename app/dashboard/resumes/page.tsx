@@ -68,7 +68,10 @@ export default async function ResumesPage() {
       </div>
 
       {/* Resumes grid with search + pagination */}
-      <ResumesGrid />
+      <ResumesGrid
+        initialResumes={[]}
+        totalCount={totalCountResumes ?? 0}
+      />
     </div>
   );
 }
