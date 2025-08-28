@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 
 type Weight = {
@@ -26,6 +28,7 @@ type Job = {
   prompt_template?: string;
   weights?: Record<string, number>;
   qualification_threshold?: number;
+  auto_move_qualified?: boolean;
 };
 
 type JobDialogProps = {
@@ -45,8 +48,20 @@ export default function JobDialog({
   const [weights, setWeights] = useState<Weight[]>([]);
   const [qualificationThreshold, setQualificationThreshold] = useState(50); // default 50%
   const [saving, setSaving] = useState(false);
+  const [autoMoveQualified, setAutoMoveQualified] = useState(false);
 
   const supabase = createClient();
+  const router = useRouter();
+
+
+useEffect(() => {
+  if (job) {
+    setAutoMoveQualified(job.auto_move_qualified ?? false);
+  } else {
+    setAutoMoveQualified(false);
+  }
+}, [job, open]);
+
 
   // Populate fields if editing
   useEffect(() => {
@@ -122,6 +137,7 @@ const handleSave = async () => {
         prompt_template: prompt,
         weights: weightsObj,
         qualification_threshold: qualificationThreshold,
+        auto_move_qualified: autoMoveQualified,
       })
       .eq("id", job.id));
   } else {
@@ -131,9 +147,11 @@ const handleSave = async () => {
         prompt_template: prompt,
         weights: weightsObj,
         qualification_threshold: qualificationThreshold,
+        auto_move_qualified: autoMoveQualified,
       },
     ]));
   }
+
 
   setSaving(false);
 
@@ -145,6 +163,26 @@ const handleSave = async () => {
   setOpen(false);
   onSave?.();
 };
+
+  const handleDelete = async () => {
+    if (!job?.id) return;
+
+    if (!confirm("Are you sure you want to delete this job?")) return;
+
+    const { error } = await supabase
+      .from("job_configs")
+      .delete()
+      .eq("id", job.id);
+
+    if (error) {
+      console.error("Error deleting job:", error);
+      return;
+    }
+
+    setOpen(false);
+    onSave?.(); // refresh the list
+    router.refresh();
+  };
 
   // Calculate total weight dynamically
 const totalWeight = weights.reduce(
@@ -273,9 +311,30 @@ const isTotalValid = totalWeight === 100;
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={autoMoveQualified}
+                onCheckedChange={(checked) => setAutoMoveQualified(checked as boolean)}
+              />
+              <span>Sort to GPT Qualified</span>
+            </div>
+
+            <div className="flex gap-2">
+              {job?.id && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
+                  Delete Job
+                </Button>
+              )}
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
