@@ -66,3 +66,62 @@
     @apply bg-background text-foreground;
   }
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+#resumes-processed-card .resume-label-loading-bar,
+#resumes-processed-card .resume-count-loading-bar {
+  display: none;
+}
+
+#resumes-processed-card.is-loading .resume-data,
+#resumes-processed-card.is-loading .resume-label-data {
+  display: none;
+}
+
+#resumes-processed-card.is-loading .resume-label-loading-bar,
+#resumes-processed-card.is-loading .resume-count-loading-bar {
+  display: block;
+}
+
+.resume-label-loading-bar {
+  width: 110px;
+  height: 10px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #dbeafe;
+}
+
+.resume-count-loading-bar {
+  width: 180px;
+  height: 50px;
+  border-radius: 5px;
+  background: #dbeafe;
+  overflow: hidden;
+}
+
+.resume-loading-fill {
+  display: block;
+  height: 100%;
+  width: 45%;
+  border-radius: 5px;
+  background: #bfdbfe;
+  animation: resume-loading-fill 0.9s ease-in-out infinite;
+}
+
+@keyframes resume-loading-fill {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(240%);
+  }
+}

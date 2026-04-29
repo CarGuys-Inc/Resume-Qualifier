@@ -45,7 +45,7 @@ export default async function ResumesPage() {
               </div>
             </CardContent>
           </Card>
-
+          {/**TODO: add count result here */}
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Resumes Processed</CardTitle>
