@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import DateRangeToolbar from "@/components/date-range-toolbar";
 import JobDialog from "@/components/job-dialog";
 import Link from "next/link";
 
@@ -26,40 +33,105 @@ import Link from "next/link";
 //   created_at: string;
 // };
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    range?: string;
+    start?: string;
+    end?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const customStartDate = params?.start;
+  const customEndDate = params?.end;
+  const hasCustomDateRange = Boolean(customStartDate && customEndDate);
+  const range = hasCustomDateRange ? "custom" : (params?.range ?? "today");
+
   const supabase = await createClient();
 
-  const { data: claimsData, error: authError } = await supabase.auth.getClaims();
+  const { data: claimsData, error: authError } =
+    await supabase.auth.getClaims();
   if (authError || !claimsData?.claims) {
     redirect("/auth/login");
   }
 
   const { data: jobsData } = await supabase.from("job_configs").select();
-  const now = new Date();
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const { data: resumesData } = await supabase
+  const now = new Date();
+
+  let startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  let endDate: Date | null = null;
+
+  if (customStartDate && customEndDate) {
+    startDate = new Date(`${customStartDate}T00:00:00`);
+    endDate = new Date(`${customEndDate}T23:59:59`);
+  } else if (range === "month") {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (range === "ytd") {
+    startDate = new Date(now.getFullYear(), 0, 1);
+  }
+
+  let resumesQuery = supabase
     .from("resume_logs")
     .select()
-    .gte("created_at", yesterday.toISOString());
+    .gte("created_at", startDate.toISOString());
 
+  if (endDate) {
+    resumesQuery = resumesQuery.lte("created_at", endDate.toISOString());
+  }
+
+  const { data: resumesData } = await resumesQuery;
   if (!jobsData) return <div>No jobs found</div>;
 
   // Sort alphabetically by job_title
   const sortedJobs = [...jobsData].sort((a, b) =>
-    a.job_title.localeCompare(b.job_title)
+    a.job_title.localeCompare(b.job_title),
   );
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(`${dateString}T00:00:00`);
+
+    return date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  let resumesLabel = "In the past 24 hours";
+
+  if (customStartDate && customEndDate) {
+    const formattedStartDate = formatDate(customStartDate);
+    const formattedEndDate = formatDate(customEndDate);
+
+    resumesLabel =
+      formattedStartDate === formattedEndDate
+        ? formattedStartDate
+        : `${formattedStartDate} - ${formattedEndDate}`;
+  } else if (range === "month") {
+    resumesLabel = now.toLocaleString("en-US", { month: "long" });
+  } else if (range === "ytd") {
+    resumesLabel = "Year to date";
+  }
 
   return (
     <div className="container mx-auto pb-10">
       <h1 className="text-3xl font-bold mb-4">Resume Processing</h1>
+      <DateRangeToolbar
+        activeRange={range}
+        initialStartDate={customStartDate ?? ""}
+        initialEndDate={customEndDate ?? ""}
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <Card className="mb-6">
           <Link href="#">
             <CardHeader>
-              <CardTitle className="text-center">Jobs Currently Qualifying</CardTitle>
+              <CardTitle className="text-center">
+                Jobs Currently Qualifying
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center text-5xl justify-center gap-2">
@@ -68,17 +140,25 @@ export default async function JobsPage() {
             </CardContent>
           </Link>
         </Card>
-        <Card className="mb-6">
+        <Card id="resumes-processed-card" className="mb-6">
           <Link href="dashboard/resumes">
             <CardHeader>
               <CardTitle className="text-center">Resumes Processed</CardTitle>
               <CardDescription className="text-sm text-gray-500 text-center">
-                In the past 24 hours
+                <span className="resume-label-data">{resumesLabel}</span>
+
+                <span className="resume-label-loading-bar hidden">
+                  <span className="resume-loading-fill" />
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center text-5xl justify-center gap-2">
-                <span>{resumesData?.length ?? 0}</span>
+                <span className="resume-data">{resumesData?.length ?? 0}</span>
+
+                <span className="resume-count-loading-bar">
+                  <span className="resume-loading-fill" />
+                </span>
               </div>
             </CardContent>
           </Link>
