@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ResumeGridToolbar from "@/components/resume-grid-toolbar";
 import ResumeCard from "@/components/resume-card";
 import {
   Pagination,
@@ -93,20 +94,20 @@ export default function ResumesGrid({
 
   // Debounce search input so we don’t hit Supabase on every keystroke
   const debouncedFetch = useMemo(
-  () =>
-    debounce((searchTerm: string, pageNumber: number) => {
-      fetchResumes(searchTerm, pageNumber);
-    }, 300),
-  [startDate, endDate, searchType, qualifiedFilter, dateSort, scoreSort],
-);
+    () =>
+      debounce((searchTerm: string, pageNumber: number) => {
+        fetchResumes(searchTerm, pageNumber);
+      }, 300),
+    [startDate, endDate, searchType, qualifiedFilter, dateSort, scoreSort],
+  );
 
-useEffect(() => {
-  debouncedFetch(search, page);
+  useEffect(() => {
+    debouncedFetch(search, page);
 
-  return () => {
-    debouncedFetch.cancel();
-  };
-}, [search, page, debouncedFetch]);
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [search, page, debouncedFetch]);
 
   const renderPaginationItems = () => {
     const items: (number | "ellipsis")[] = [];
@@ -123,15 +124,18 @@ useEffect(() => {
   return (
     <div>
       {/* Search */}
-      <Input
-        type="text"
-        placeholder="Search by candidate name..."
-        value={search}
-        onChange={(e) => {
-          setPage(1);
-          setSearch(e.target.value);
-        }}
-        className="mb-4 p-2 border rounded w-full"
+      <ResumeGridToolbar
+        search={search}
+        setSearch={setSearch}
+        searchType={searchType}
+        setSearchType={setSearchType}
+        qualifiedFilter={qualifiedFilter}
+        setQualifiedFilter={setQualifiedFilter}
+        dateSort={dateSort}
+        setDateSort={setDateSort}
+        scoreSort={scoreSort}
+        setScoreSort={setScoreSort}
+        resetPage={() => setPage(1)}
       />
 
       {/* Grid */}
