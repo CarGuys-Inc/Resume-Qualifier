@@ -28,14 +28,15 @@ export default function ResumeGridToolbar({
 }: ResumeGridToolbarProps) {
    return (
     <div className="grid grid-cols-1 gap-3 mb-4 lg:grid-cols-[1fr_auto_auto_auto]">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr]">
+        {/* Search with select inside */}
+      <div className="flex w-full items-center rounded border bg-white overflow-hidden">
         <select
           value={searchType}
           onChange={(e) => {
             resetPage();
             setSearchType(e.target.value as "candidate_name" | "job_title");
           }}
-          className="border rounded px-3 py-2"
+          className="w-auto shrink-0 border-r text-sm px-3 py-2 outline-none"
         >
           <option value="candidate_name">Candidate</option>
           <option value="job_title">Job Title</option>
@@ -53,7 +54,7 @@ export default function ResumeGridToolbar({
             resetPage();
             setSearch(e.target.value);
           }}
-          className="p-2 border rounded w-full"
+          className="border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>
 
@@ -65,7 +66,7 @@ export default function ResumeGridToolbar({
             e.target.value as "all" | "qualified" | "not_qualified",
           );
         }}
-        className="border rounded px-3 py-2"
+        className="w-fit justify-self-start lg:justify-self-end border rounded px-3 py-2"
       >
         <option value="all">All Results</option>
         <option value="qualified">Qualified</option>
@@ -78,7 +79,7 @@ export default function ResumeGridToolbar({
           resetPage();
           setDateSort(e.target.value as "newest" | "oldest");
         }}
-        className="border rounded px-3 py-2"
+        className="w-fit justify-self-start lg:justify-self-end border rounded px-3 py-2"
       >
         <option value="newest">Newest First</option>
         <option value="oldest">Oldest First</option>
@@ -90,7 +91,7 @@ export default function ResumeGridToolbar({
           resetPage();
           setScoreSort(e.target.value as "none" | "highest" | "lowest");
         }}
-        className="border rounded px-3 py-2"
+        className="w-fit justify-self-start lg:justify-self-end border rounded px-3 py-2"
       >
         <option value="highest">Highest Score</option>
         <option value="lowest">Lowest Score</option>
