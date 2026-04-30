@@ -134,8 +134,9 @@ export default async function ResumesPage({
 
       {/* Resumes grid with search + pagination */}
       <ResumesGrid
-        initialResumes={filteredResumes ?? []}
         totalCount={filteredResumesCount ?? 0}
+        startDate={startDate.toISOString()}
+        endDate={endDate?.toISOString() ?? null}
       />
     </div>
   );
