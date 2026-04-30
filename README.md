@@ -8,7 +8,7 @@
 ## Features
 
 - Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
+  - App Router...
   - Pages Router
   - Middleware
   - Client
