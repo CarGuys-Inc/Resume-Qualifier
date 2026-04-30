@@ -8,6 +8,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import DateRangeToolbar from "@/components/date-range-toolbar";
+import ResumesProcessedCard from "@/components/resumes-processed-card";
 import JobDialog from "@/components/job-dialog";
 import Link from "next/link";
 
@@ -72,16 +73,20 @@ export default async function JobsPage({
     startDate = new Date(now.getFullYear(), 0, 1);
   }
 
-  let resumesQuery = supabase
+  let resumesCountQuery = supabase
     .from("resume_logs")
-    .select()
+    .select("*", { count: "exact", head: true })
     .gte("created_at", startDate.toISOString());
 
   if (endDate) {
-    resumesQuery = resumesQuery.lte("created_at", endDate.toISOString());
+    resumesCountQuery = resumesCountQuery.lte(
+      "created_at",
+      endDate.toISOString(),
+    );
   }
 
-  const { data: resumesData } = await resumesQuery;
+  const { count: resumesCount } = await resumesCountQuery;
+  
   if (!jobsData) return <div>No jobs found</div>;
 
   // Sort alphabetically by job_title
@@ -115,6 +120,17 @@ export default async function JobsPage({
     resumesLabel = "Year to date";
   }
 
+  const resumesHrefParams = new URLSearchParams();
+
+  if (customStartDate && customEndDate) {
+    resumesHrefParams.set("start", customStartDate);
+    resumesHrefParams.set("end", customEndDate);
+  } else {
+    resumesHrefParams.set("range", range);
+  }
+
+  const resumesHref = `/dashboard/resumes?${resumesHrefParams.toString()}`;
+
   return (
     <div className="container mx-auto pb-10">
       <h1 className="text-3xl font-bold mb-4">Resume Processing</h1>
@@ -125,8 +141,8 @@ export default async function JobsPage({
       />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <Card className="mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-full mb-8">
+        <Card className="h-full">
           <Link href="#">
             <CardHeader>
               <CardTitle className="text-center">
@@ -140,29 +156,11 @@ export default async function JobsPage({
             </CardContent>
           </Link>
         </Card>
-        <Card id="resumes-processed-card" className="mb-6">
-          <Link href="dashboard/resumes">
-            <CardHeader>
-              <CardTitle className="text-center">Resumes Processed</CardTitle>
-              <CardDescription className="text-sm text-gray-500 text-center">
-                <span className="resume-label-data">{resumesLabel}</span>
-
-                <span className="resume-label-loading-bar hidden">
-                  <span className="resume-loading-fill" />
-                </span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center text-5xl justify-center gap-2">
-                <span className="resume-data">{resumesData?.length ?? 0}</span>
-
-                <span className="resume-count-loading-bar">
-                  <span className="resume-loading-fill" />
-                </span>
-              </div>
-            </CardContent>
-          </Link>
-        </Card>
+        <ResumesProcessedCard
+          resumesLabel={resumesLabel}
+          resumesCount={resumesCount ?? 0}
+          href={resumesHref}
+        />
       </div>
 
       {/* Job list */}
