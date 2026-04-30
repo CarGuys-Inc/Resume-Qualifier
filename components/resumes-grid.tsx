@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ResumeCard from "@/components/resume-card";
 import {
@@ -18,37 +18,20 @@ import debounce from "lodash.debounce";
 const PAGE_SIZE = 24;
 
 export default function ResumesGrid({
+  initialResumes,
   totalCount,
-  startDate,
-  endDate,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialResumes: any[];
   totalCount: number;
-  startDate: string;
-  endDate: string | null;
 }) {
   const supabase = createClient();
 
-  const [resumes, setResumes] = useState<any[]>([]);
+  const [resumes, setResumes] = useState(initialResumes || []);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-
-  const [searchType, setSearchType] = useState<"candidate_name" | "job_title">(
-    "job_title",
-  );
-
-  const [qualifiedFilter, setQualifiedFilter] = useState<
-    "all" | "qualified" | "not_qualified"
-  >("all");
-
-  const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
-
-  const [scoreSort, setScoreSort] = useState<"none" | "highest" | "lowest">(
-    "highest",
-  );
-
   const [totalPages, setTotalPages] = useState(
-    Math.max(1, Math.ceil((totalCount ?? 0) / PAGE_SIZE)),
+    Math.ceil((totalCount ?? 0) / PAGE_SIZE)
   );
 
   // Debounced search
@@ -56,31 +39,11 @@ export default function ResumesGrid({
     let query = supabase
       .from("resume_logs")
       .select("*", { count: "exact" })
-      .gte("created_at", startDate)
+      .order("created_at", { ascending: false })
       .range((pageNumber - 1) * PAGE_SIZE, pageNumber * PAGE_SIZE - 1);
 
-    if (endDate) {
-      query = query.lte("created_at", endDate);
-    }
-
     if (searchTerm) {
-      query = query.ilike(searchType, `%${searchTerm}%`);
-    }
-
-    if (qualifiedFilter === "qualified") {
-      query = query.eq("qualified", true);
-    } else if (qualifiedFilter === "not_qualified") {
-      query = query.eq("qualified", false);
-    }
-
-    query = query.order("created_at", {
-      ascending: dateSort === "oldest",
-    });
-
-    if (scoreSort !== "none") {
-      query = query.order("score", {
-        ascending: scoreSort === "lowest",
-      });
+      query = query.ilike("candidate_name", `%${searchTerm}%`);
     }
 
     const { data, count, error } = await query;
@@ -92,21 +55,13 @@ export default function ResumesGrid({
   };
 
   // Debounce search input so we don’t hit Supabase on every keystroke
-  const debouncedFetch = useMemo(
-  () =>
-    debounce((searchTerm: string, pageNumber: number) => {
-      fetchResumes(searchTerm, pageNumber);
-    }, 300),
-  [startDate, endDate, searchType, qualifiedFilter, dateSort, scoreSort],
-);
+  const debouncedFetch = debounce((searchTerm: string, pageNumber: number) => {
+    fetchResumes(searchTerm, pageNumber);
+  }, 300);
 
-useEffect(() => {
-  debouncedFetch(search, page);
-
-  return () => {
-    debouncedFetch.cancel();
-  };
-}, [search, page, debouncedFetch]);
+  useEffect(() => {
+    debouncedFetch(search, page);
+  }, [search, page, debouncedFetch]);
 
   const renderPaginationItems = () => {
     const items: (number | "ellipsis")[] = [];
@@ -165,7 +120,7 @@ useEffect(() => {
                     {p}
                   </PaginationLink>
                 </PaginationItem>
-              ),
+              )
             )}
 
             <PaginationItem>
