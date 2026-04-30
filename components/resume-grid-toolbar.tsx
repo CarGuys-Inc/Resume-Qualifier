@@ -37,7 +37,7 @@ export default function ResumeGridToolbar({
           }}
           className="border rounded px-3 py-2"
         >
-          <option value="candidate_name">Candidate</option>
+          <option value="candidate_name">Candidate.</option>
           <option value="job_title">Job Title</option>
         </select>
 
