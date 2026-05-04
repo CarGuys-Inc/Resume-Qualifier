@@ -34,6 +34,7 @@ export default function ResumeGridToolbar({
           value={searchType}
           onChange={(e) => {
             resetPage();
+            setSearch("");
             setSearchType(e.target.value as "candidate_name" | "job_title");
           }}
           className="w-auto shrink-0 border-r text-sm px-3 py-2 outline-none"
