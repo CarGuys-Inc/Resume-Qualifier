@@ -106,19 +106,32 @@ export default function ResumeCard({ resume }: ResumeCardProps) {
             <span className="block text-sm font-medium text-muted-foreground mb-1">
               Reasoning
             </span>
-            <ul
-              style={{
-                listStyleType: "disc",
-                listStylePosition: "outside",
-                paddingLeft: "1.25rem",
-                paddingRight: "0.5rem",
-                marginTop: "1.15rem",
-                fontSize: "0.85rem",
-                lineHeight: "1.625",
-                width: "100%",
-              }}
-              dangerouslySetInnerHTML={{ __html: cleanReasoning }}
-            />
+
+            {cleanReasoning ? (
+              <ul
+                style={{
+                  listStyleType: "disc",
+                  listStylePosition: "outside",
+                  paddingLeft: "1.25rem",
+                  paddingRight: "0.5rem",
+                  marginTop: "1.15rem",
+                  fontSize: "0.85rem",
+                  lineHeight: "1.625",
+                  width: "100%",
+                }}
+                dangerouslySetInnerHTML={{ __html: cleanReasoning }}
+              />
+            ) : (
+              <p
+                style={{
+                  marginTop: "1.15rem",
+                  fontSize: "0.85rem",
+                  lineHeight: "1.625",
+                }}
+              >
+                {resume.reasoning}
+              </p>
+            )}
           </div>
         </CardContent>
       </Link>
