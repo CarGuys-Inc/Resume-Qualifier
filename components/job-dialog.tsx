@@ -48,7 +48,9 @@ export default function JobDialog({
   const [weights, setWeights] = useState<Weight[]>([]);
   const [qualificationThreshold, setQualificationThreshold] = useState(50); // default 50%
   const [saving, setSaving] = useState(false);
-  const [autoMoveQualified, setAutoMoveQualified] = useState(false);
+  const [autoMoveQualified, setAutoMoveQualified] = useState(
+    job?.auto_move_qualified ?? false,
+  );
   const [toggleSaveStatus, setToggleSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -85,6 +87,10 @@ export default function JobDialog({
       setWeights([]);
     }
   }, [job, open]);
+
+  useEffect(() => {
+    setAutoMoveQualified(job?.auto_move_qualified ?? false);
+  }, [job?.auto_move_qualified]);
 
   const handleAddWeight = () =>
     setWeights([...weights, { term: "", value: "" }]);
@@ -195,6 +201,11 @@ export default function JobDialog({
 
   const handleAutoMoveToggle = async (checked: boolean) => {
     setAutoMoveQualified(checked);
+
+    if(!job?.id) {
+      return;
+    }
+    
     setToggleSaveStatus("saving");
 
     const { error } = await supabase
