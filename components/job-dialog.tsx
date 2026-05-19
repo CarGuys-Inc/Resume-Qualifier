@@ -49,19 +49,20 @@ export default function JobDialog({
   const [qualificationThreshold, setQualificationThreshold] = useState(50); // default 50%
   const [saving, setSaving] = useState(false);
   const [autoMoveQualified, setAutoMoveQualified] = useState(false);
+  const [toggleSaveStatus, setToggleSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
 
   const supabase = createClient();
   const router = useRouter();
 
-
-useEffect(() => {
-  if (job) {
-    setAutoMoveQualified(job.auto_move_qualified ?? false);
-  } else {
-    setAutoMoveQualified(false);
-  }
-}, [job, open]);
-
+  useEffect(() => {
+    if (job) {
+      setAutoMoveQualified(job.auto_move_qualified ?? false);
+    } else {
+      setAutoMoveQualified(false);
+    }
+  }, [job, open]);
 
   // Populate fields if editing
   useEffect(() => {
@@ -75,7 +76,7 @@ useEffect(() => {
               term,
               value,
             }))
-          : []
+          : [],
       );
     } else {
       setJobTitle("");
@@ -94,7 +95,7 @@ useEffect(() => {
   const handleChangeWeight = (
     index: number,
     key: keyof Weight,
-    value: string
+    value: string,
   ) => {
     setWeights((prev) => {
       const updated = [...prev];
@@ -109,60 +110,59 @@ useEffect(() => {
     });
   };
 
-// Update handleSave to validate
-const handleSave = async () => {
-  if (!isTotalValid) {
-    alert("The total of all weights must equal 100%");
-    return;
-  }
+  // Update handleSave to validate
+  const handleSave = async () => {
+    if (!isTotalValid) {
+      alert("The total of all weights must equal 100%");
+      return;
+    }
 
-  setSaving(true);
+    setSaving(true);
 
-  const weightsObj: Record<string, number> = weights.reduce(
-    (acc, { term, value }) => {
-      if (term.trim() !== "" && !isNaN(Number(value))) {
-        acc[term.trim()] = Number(value);
-      }
-      return acc;
-    },
-    {}
-  );
-
-  let error;
-  if (job?.id) {
-    ({ error } = await supabase
-      .from("job_configs")
-      .update({
-        job_title: jobTitle,
-        prompt_template: prompt,
-        weights: weightsObj,
-        qualification_threshold: qualificationThreshold,
-        auto_move_qualified: autoMoveQualified,
-      })
-      .eq("id", job.id));
-  } else {
-    ({ error } = await supabase.from("job_configs").insert([
-      {
-        job_title: jobTitle,
-        prompt_template: prompt,
-        weights: weightsObj,
-        qualification_threshold: qualificationThreshold,
-        auto_move_qualified: autoMoveQualified,
+    const weightsObj: Record<string, number> = weights.reduce(
+      (acc, { term, value }) => {
+        if (term.trim() !== "" && !isNaN(Number(value))) {
+          acc[term.trim()] = Number(value);
+        }
+        return acc;
       },
-    ]));
-  }
+      {},
+    );
 
+    let error;
+    if (job?.id) {
+      ({ error } = await supabase
+        .from("job_configs")
+        .update({
+          job_title: jobTitle,
+          prompt_template: prompt,
+          weights: weightsObj,
+          qualification_threshold: qualificationThreshold,
+          auto_move_qualified: autoMoveQualified,
+        })
+        .eq("id", job.id));
+    } else {
+      ({ error } = await supabase.from("job_configs").insert([
+        {
+          job_title: jobTitle,
+          prompt_template: prompt,
+          weights: weightsObj,
+          qualification_threshold: qualificationThreshold,
+          auto_move_qualified: autoMoveQualified,
+        },
+      ]));
+    }
 
-  setSaving(false);
+    setSaving(false);
 
-  if (error) {
-    console.error("Error saving job:", error);
-    return;
-  }
+    if (error) {
+      console.error("Error saving job:", error);
+      return;
+    }
 
-  setOpen(false);
-  onSave?.();
-};
+    setOpen(false);
+    onSave?.();
+  };
 
   const handleDelete = async () => {
     if (!job?.id) return;
@@ -185,15 +185,34 @@ const handleSave = async () => {
   };
 
   // Calculate total weight dynamically
-const totalWeight = weights.reduce(
-  (acc, w) => acc + (typeof w.value === "number" ? w.value : 0),
-  0
-);
+  const totalWeight = weights.reduce(
+    (acc, w) => acc + (typeof w.value === "number" ? w.value : 0),
+    0,
+  );
 
-// Check if total is valid
-const isTotalValid = totalWeight === 100;
+  // Check if total is valid
+  const isTotalValid = totalWeight === 100;
 
+  const handleAutoMoveToggle = async (checked: boolean) => {
+    setAutoMoveQualified(checked);
+    setToggleSaveStatus("saving");
 
+    const { error } = await supabase
+      .from("job_configs")
+      .update({ auto_move_qualified: checked })
+      .eq("id", job.id);
+
+    if (error) {
+      setToggleSaveStatus("error");
+      return;
+    }
+
+    setToggleSaveStatus("saved");
+
+    setTimeout(() => {
+      setToggleSaveStatus("idle");
+    }, 1500);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -202,7 +221,44 @@ const isTotalValid = totalWeight === 100;
           <Button>{triggerLabel}</Button>
         ) : (
           <div className="mb-4 p-4 border rounded cursor-pointer dark:hover:bg-gray-600 hover:bg-gray-50">
-            <h2 className="text-xl font-semibold">{job?.job_title}</h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold">{job?.job_title}</h2>
+
+              <div
+                className="relative flex items-center group"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <Switch
+                  checked={autoMoveQualified}
+                  onCheckedChange={(checked) =>
+                    handleAutoMoveToggle(checked as boolean)
+                  }
+                />
+
+                <span className="pointer-events-none absolute right-0 bottom-full mb-2 hidden whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white group-hover:block z-50">
+                  Sort to GPT Qualified
+                </span>
+
+                {toggleSaveStatus !== "idle" && (
+                  <div
+                    className={`absolute left-full top-1/2 ml-3 -translate-y-1/2 rounded px-2 py-1 text-xs shadow-sm transition-all duration-300 whitespace-nowrap ${
+                      toggleSaveStatus === "saving"
+                        ? "bg-blue-50 text-blue-700"
+                        : toggleSaveStatus === "saved"
+                          ? "bg-green-50 text-green-700"
+                          : "bg-red-50 text-red-700"
+                    }`}
+                  >
+                    {toggleSaveStatus === "saving" && "Saving..."}
+                    {toggleSaveStatus === "saved" && "Saved"}
+                    {toggleSaveStatus === "error" && "Save failed"}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </DialogTrigger>
@@ -283,7 +339,6 @@ const isTotalValid = totalWeight === 100;
                 + Add Weight
               </Button>
             </div>
-
           </div>
 
           {/* Qualification Threshold */}
@@ -315,7 +370,9 @@ const isTotalValid = totalWeight === 100;
             <div className="flex items-center gap-2">
               <Switch
                 checked={autoMoveQualified}
-                onCheckedChange={(checked) => setAutoMoveQualified(checked as boolean)}
+                onCheckedChange={(checked) =>
+                  setAutoMoveQualified(checked as boolean)
+                }
               />
               <span>Sort to GPT Qualified</span>
             </div>
