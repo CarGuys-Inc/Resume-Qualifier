@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 import { basicPrompt } from "@/lib/prompts";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ export default function JobDialog() {
   const [prompt, setPrompt] = useState(basicPrompt);
   const [weights, setWeights] = useState<Weight[]>([{ term: "", value: 0 }]);
   const [qualificationThreshold, setQualificationThreshold] = useState(70); // default 70%
+  const [autoMoveQualified, setAutoMoveQualified] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const supabase = createClient();
@@ -32,7 +34,11 @@ export default function JobDialog() {
     setWeights(weights.filter((_, i) => i !== index));
   };
 
-  const handleChangeWeight = (index: number, key: keyof Weight, value: string | number) => {
+  const handleChangeWeight = (
+    index: number,
+    key: keyof Weight,
+    value: string | number,
+  ) => {
     setWeights((prev) =>
       prev.map((w, i) =>
         i === index
@@ -40,20 +46,23 @@ export default function JobDialog() {
               ...w,
               [key]: key === "value" ? Number(value) : value,
             }
-          : w
-      )
+          : w,
+      ),
     );
   };
 
   const handleSave = async () => {
     setSaving(true);
 
-    const weightsObj = weights.reduce<Record<string, number>>((acc, { term, value }) => {
-      if (term.trim() !== "" && !isNaN(value)) {
-        acc[term.trim()] = Number(value);
-      }
-      return acc;
-    }, {});
+    const weightsObj = weights.reduce<Record<string, number>>(
+      (acc, { term, value }) => {
+        if (term.trim() !== "" && !isNaN(value)) {
+          acc[term.trim()] = Number(value);
+        }
+        return acc;
+      },
+      {},
+    );
 
     const { error } = await supabase.from("job_configs").insert([
       {
@@ -61,6 +70,7 @@ export default function JobDialog() {
         prompt_template: prompt,
         weights: weightsObj,
         qualification_threshold: qualificationThreshold,
+        auto_move_qualified: autoMoveQualified,
       },
     ]);
 
@@ -88,7 +98,9 @@ export default function JobDialog() {
 
       {/* Prompt Template */}
       <div>
-        <label className="block text-sm font-medium mb-1">Prompt Template</label>
+        <label className="block text-sm font-medium mb-1">
+          Prompt Template
+        </label>
         <Textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -105,14 +117,18 @@ export default function JobDialog() {
               <Input
                 placeholder="Term"
                 value={w.term}
-                onChange={(e) => handleChangeWeight(index, "term", e.target.value)}
+                onChange={(e) =>
+                  handleChangeWeight(index, "term", e.target.value)
+                }
                 className="flex-1"
               />
               <Input
                 placeholder="Value"
                 type="number"
                 value={w.value}
-                onChange={(e) => handleChangeWeight(index, "value", e.target.value)}
+                onChange={(e) =>
+                  handleChangeWeight(index, "value", e.target.value)
+                }
                 className="w-28"
               />
               <Button
@@ -149,7 +165,23 @@ export default function JobDialog() {
           </span>
         </div>
       </div>
+      <div className="flex items-center justify-between rounded border p-4">
+        <div>
+          <label className="block text-sm font-medium">
+            Sort to GPT Qualified
+          </label>
+          <p className="text-sm text-muted-foreground">
+            Automatically move qualified candidates to the GPT Qualified stage.
+          </p>
+        </div>
 
+        <Switch
+          checked={autoMoveQualified}
+          onCheckedChange={(checked) =>
+            setAutoMoveQualified(checked as boolean)
+          }
+        />
+      </div>
       <Button onClick={handleSave} disabled={saving}>
         {saving ? "Saving..." : "Save Job"}
       </Button>
