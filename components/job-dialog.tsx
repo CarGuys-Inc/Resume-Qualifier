@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,9 @@ export default function JobDialog({
   const [toggleSaveStatus, setToggleSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const [saveMessage, setSaveMessage] = useState<
+    { type: "success" | "error"; text: string } | null
+  >(null);
 
   const supabase = createClient();
   const router = useRouter();
@@ -90,6 +94,7 @@ export default function JobDialog({
       setWeights([]);
       setVariants([]);
     }
+    setSaveMessage(null);
   }, [job, open]);
 
   useEffect(() => {
@@ -166,6 +171,7 @@ export default function JobDialog({
     }
 
     setSaving(true);
+    setSaveMessage(null);
 
     const cleanedVariants = variants
       .map((v) => v.trim())
@@ -181,41 +187,53 @@ export default function JobDialog({
       {},
     );
 
-    let error;
-    if (job?.id) {
-      ({ error } = await supabase
-        .from("job_configs")
-        .update({
-          job_title: jobTitle,
-          prompt_template: prompt,
-          weights: weightsObj,
-          qualification_threshold: qualificationThreshold,
-          auto_move_qualified: autoMoveQualified,
-          variants: cleanedVariants,
-        })
-        .eq("id", job.id));
-    } else {
-      ({ error } = await supabase.from("job_configs").insert([
-        {
-          job_title: jobTitle,
-          prompt_template: prompt,
-          weights: weightsObj,
-          qualification_threshold: qualificationThreshold,
-          auto_move_qualified: autoMoveQualified,
-          variants: cleanedVariants,
-        },
-      ]));
+    try {
+      let error;
+      if (job?.id) {
+        ({ error } = await supabase
+          .from("job_configs")
+          .update({
+            job_title: jobTitle,
+            prompt_template: prompt,
+            weights: weightsObj,
+            qualification_threshold: qualificationThreshold,
+            auto_move_qualified: autoMoveQualified,
+            variants: cleanedVariants,
+          })
+          .eq("id", job.id));
+      } else {
+        ({ error } = await supabase.from("job_configs").insert([
+          {
+            job_title: jobTitle,
+            prompt_template: prompt,
+            weights: weightsObj,
+            qualification_threshold: qualificationThreshold,
+            auto_move_qualified: autoMoveQualified,
+            variants: cleanedVariants,
+          },
+        ]));
+      }
+
+      if (error) {
+        console.error("Error saving job:", error);
+        setSaveMessage({
+          type: "error",
+          text: error.message || "Failed to save. Please try again.",
+        });
+        return;
+      }
+
+      setSaveMessage({ type: "success", text: "Changes saved successfully." });
+      onSave?.();
+    } catch (err) {
+      console.error("Error saving job:", err);
+      setSaveMessage({
+        type: "error",
+        text: "Failed to save. Please try again.",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-
-    if (error) {
-      console.error("Error saving job:", error);
-      return;
-    }
-
-    setOpen(false);
-    onSave?.();
   };
 
   const handleDelete = async () => {
@@ -337,6 +355,7 @@ export default function JobDialog({
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
               placeholder="e.g. Automotive Mechanic"
+              disabled={saving}
             />
           </div>
 
@@ -358,11 +377,13 @@ export default function JobDialog({
                         }
                         placeholder="e.g. Quick Lube Tech"
                         className="flex-1"
+                        disabled={saving}
                       />
                       <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => handleRemoveVariant(index)}
+                        disabled={saving}
                       >
                         x
                       </Button>
@@ -375,7 +396,12 @@ export default function JobDialog({
                   </div>
                 );
               })}
-              <Button variant="secondary" size="sm" onClick={handleAddVariant}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleAddVariant}
+                disabled={saving}
+              >
                 + Add Variant
               </Button>
             </div>
@@ -394,6 +420,7 @@ export default function JobDialog({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={10}
+              disabled={saving}
             />
           </div>
 
@@ -410,6 +437,7 @@ export default function JobDialog({
                       handleChangeWeight(index, "term", e.target.value)
                     }
                     className="flex-1"
+                    disabled={saving}
                   />
                   <Input
                     placeholder="Value"
@@ -419,11 +447,13 @@ export default function JobDialog({
                       handleChangeWeight(index, "value", e.target.value)
                     }
                     className="w-28"
+                    disabled={saving}
                   />
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveWeight(index)}
+                    disabled={saving}
                   >
                     Remove
                   </Button>
@@ -435,7 +465,12 @@ export default function JobDialog({
                   <span className="text-red-500 ml-2">Must equal 100%</span>
                 )}
               </div>
-              <Button variant="secondary" size="sm" onClick={handleAddWeight}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleAddWeight}
+                disabled={saving}
+              >
                 + Add Weight
               </Button>
             </div>
@@ -457,6 +492,7 @@ export default function JobDialog({
                 step={1}
                 className="flex-1"
                 onValueChange={(value) => setQualificationThreshold(value[0])}
+                disabled={saving}
               />
               <span className="w-12 text-right font-medium">
                 {qualificationThreshold}%
@@ -466,30 +502,45 @@ export default function JobDialog({
         </div>
 
         <DialogFooter>
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={autoMoveQualified}
-                onCheckedChange={(checked) =>
-                  setAutoMoveQualified(checked as boolean)
-                }
-              />
-              <span>Sort to GPT Qualified</span>
-            </div>
-
-            <div className="flex gap-2">
-              {job?.id && (
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
+          <div className="flex flex-col gap-2 w-full">
+            {saveMessage && (
+              <p
+                className={`text-sm ${
+                  saveMessage.type === "success"
+                    ? "text-green-600"
+                    : "text-red-500"
+                }`}
+              >
+                {saveMessage.text}
+              </p>
+            )}
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={autoMoveQualified}
+                  onCheckedChange={(checked) =>
+                    setAutoMoveQualified(checked as boolean)
+                  }
                   disabled={saving}
-                >
-                  Delete Job
+                />
+                <span>Sort to GPT Qualified</span>
+              </div>
+
+              <div className="flex gap-2">
+                {job?.id && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={saving}
+                  >
+                    Delete Job
+                  </Button>
+                )}
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="animate-spin" />}
+                  {saving ? "Saving..." : "Save Changes"}
                 </Button>
-              )}
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
+              </div>
             </div>
           </div>
         </DialogFooter>

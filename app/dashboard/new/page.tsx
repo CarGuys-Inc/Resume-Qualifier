@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 import { basicPrompt } from "@/lib/prompts";
-import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 type Weight = {
   term: string;
@@ -23,9 +23,11 @@ export default function JobDialog() {
   const [qualificationThreshold, setQualificationThreshold] = useState(70); // default 70%
   const [autoMoveQualified, setAutoMoveQualified] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<
+    { type: "success" | "error"; text: string } | null
+  >(null);
 
   const supabase = createClient();
-  const router = useRouter();
 
   const handleAddWeight = () => {
     setWeights([...weights, { term: "", value: 0 }]);
@@ -96,6 +98,7 @@ export default function JobDialog() {
     }
 
     setSaving(true);
+    setSaveMessage(null);
 
     const weightsObj = weights.reduce<Record<string, number>>(
       (acc, { term, value }) => {
@@ -111,25 +114,37 @@ export default function JobDialog() {
       .map((v) => v.trim())
       .filter((v) => v !== "");
 
-    const { error } = await supabase.from("job_configs").insert([
-      {
-        job_title: jobTitle,
-        prompt_template: prompt,
-        weights: weightsObj,
-        qualification_threshold: qualificationThreshold,
-        auto_move_qualified: autoMoveQualified,
-        variants: cleanedVariants,
-      },
-    ]);
+    try {
+      const { error } = await supabase.from("job_configs").insert([
+        {
+          job_title: jobTitle,
+          prompt_template: prompt,
+          weights: weightsObj,
+          qualification_threshold: qualificationThreshold,
+          auto_move_qualified: autoMoveQualified,
+          variants: cleanedVariants,
+        },
+      ]);
 
-    setSaving(false);
+      if (error) {
+        console.error("Error saving job:", error);
+        setSaveMessage({
+          type: "error",
+          text: error.message || "Failed to save. Please try again.",
+        });
+        return;
+      }
 
-    if (error) {
-      console.error("Error saving job:", error);
-      return;
+      setSaveMessage({ type: "success", text: "Changes saved successfully." });
+    } catch (err) {
+      console.error("Error saving job:", err);
+      setSaveMessage({
+        type: "error",
+        text: "Failed to save. Please try again.",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    router.push("/dashboard");
   };
 
   return (
@@ -141,6 +156,7 @@ export default function JobDialog() {
           value={jobTitle}
           onChange={(e) => setJobTitle(e.target.value)}
           placeholder="e.g. Automotive Mechanic"
+          disabled={saving}
         />
       </div>
 
@@ -160,11 +176,13 @@ export default function JobDialog() {
                     }
                     placeholder="e.g. Quick Lube Tech"
                     className="flex-1"
+                    disabled={saving}
                   />
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveVariant(index)}
+                    disabled={saving}
                   >
                     x
                   </Button>
@@ -175,7 +193,12 @@ export default function JobDialog() {
               </div>
             );
           })}
-          <Button variant="secondary" size="sm" onClick={handleAddVariant}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddVariant}
+            disabled={saving}
+          >
             + Add Variant
           </Button>
         </div>
@@ -190,6 +213,7 @@ export default function JobDialog() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={20}
+          disabled={saving}
         />
       </div>
 
@@ -206,6 +230,7 @@ export default function JobDialog() {
                   handleChangeWeight(index, "term", e.target.value)
                 }
                 className="flex-1"
+                disabled={saving}
               />
               <Input
                 placeholder="Value"
@@ -215,17 +240,24 @@ export default function JobDialog() {
                   handleChangeWeight(index, "value", e.target.value)
                 }
                 className="w-28"
+                disabled={saving}
               />
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => handleRemoveWeight(index)}
+                disabled={saving}
               >
                 Remove
               </Button>
             </div>
           ))}
-          <Button variant="secondary" size="sm" onClick={handleAddWeight}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddWeight}
+            disabled={saving}
+          >
             + Add Weight
           </Button>
         </div>
@@ -244,6 +276,7 @@ export default function JobDialog() {
             max={100}
             step={1}
             className="flex-1"
+            disabled={saving}
           />
           <span className="w-12 text-sm text-muted-foreground text-right">
             {qualificationThreshold}%
@@ -265,9 +298,20 @@ export default function JobDialog() {
           onCheckedChange={(checked) =>
             setAutoMoveQualified(checked as boolean)
           }
+          disabled={saving}
         />
       </div>
+      {saveMessage && (
+        <p
+          className={`text-sm ${
+            saveMessage.type === "success" ? "text-green-600" : "text-red-500"
+          }`}
+        >
+          {saveMessage.text}
+        </p>
+      )}
       <Button onClick={handleSave} disabled={saving}>
+        {saving && <Loader2 className="animate-spin" />}
         {saving ? "Saving..." : "Save Job"}
       </Button>
     </div>
