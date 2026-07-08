@@ -19,6 +19,7 @@ export default function JobDialog() {
   const [jobTitle, setJobTitle] = useState("");
   const [prompt, setPrompt] = useState(basicPrompt);
   const [weights, setWeights] = useState<Weight[]>([{ term: "", value: 0 }]);
+  const [variants, setVariants] = useState<string[]>([]);
   const [qualificationThreshold, setQualificationThreshold] = useState(70); // default 70%
   const [autoMoveQualified, setAutoMoveQualified] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +52,49 @@ export default function JobDialog() {
     );
   };
 
+  const handleAddVariant = () => {
+    setVariants([...variants, ""]);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const handleChangeVariant = (index: number, value: string) => {
+    setVariants((prev) => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
+  };
+
+  // Returns a validation message for a variant, or null if it's valid
+  const getVariantError = (index: number, value: string): string | null => {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) return null;
+
+    if (trimmed === jobTitle.trim().toLowerCase()) {
+      return "Same as job title";
+    }
+
+    const isDuplicate = variants.some(
+      (v, i) => i !== index && v.trim().toLowerCase() === trimmed,
+    );
+    if (isDuplicate) return "Already added";
+
+    return null;
+  };
+
+  const hasVariantErrors = variants.some(
+    (v, i) => getVariantError(i, v) !== null,
+  );
+
   const handleSave = async () => {
+    if (hasVariantErrors) {
+      alert("Please resolve the variant errors before saving.");
+      return;
+    }
+
     setSaving(true);
 
     const weightsObj = weights.reduce<Record<string, number>>(
@@ -64,6 +107,10 @@ export default function JobDialog() {
       {},
     );
 
+    const cleanedVariants = variants
+      .map((v) => v.trim())
+      .filter((v) => v !== "");
+
     const { error } = await supabase.from("job_configs").insert([
       {
         job_title: jobTitle,
@@ -71,6 +118,7 @@ export default function JobDialog() {
         weights: weightsObj,
         qualification_threshold: qualificationThreshold,
         auto_move_qualified: autoMoveQualified,
+        variants: cleanedVariants,
       },
     ]);
 
@@ -94,6 +142,43 @@ export default function JobDialog() {
           onChange={(e) => setJobTitle(e.target.value)}
           placeholder="e.g. Automotive Mechanic"
         />
+      </div>
+
+      {/* Variants */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Variants</label>
+        <div className="space-y-2">
+          {variants.map((variant, index) => {
+            const variantError = getVariantError(index, variant);
+            return (
+              <div key={index}>
+                <div className="flex gap-2">
+                  <Input
+                    value={variant}
+                    onChange={(e) =>
+                      handleChangeVariant(index, e.target.value)
+                    }
+                    placeholder="e.g. Quick Lube Tech"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRemoveVariant(index)}
+                  >
+                    x
+                  </Button>
+                </div>
+                {variantError && (
+                  <p className="text-red-500 text-xs mt-1">{variantError}</p>
+                )}
+              </div>
+            );
+          })}
+          <Button variant="secondary" size="sm" onClick={handleAddVariant}>
+            + Add Variant
+          </Button>
+        </div>
       </div>
 
       {/* Prompt Template */}

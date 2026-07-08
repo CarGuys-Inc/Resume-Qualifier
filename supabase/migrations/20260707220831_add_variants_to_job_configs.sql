@@ -1,0 +1,1 @@
+ALTER TABLE job_configs ADD COLUMN variants text[] DEFAULT '{}';
